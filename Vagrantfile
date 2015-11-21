@@ -52,7 +52,12 @@ Vagrant.configure("2") do |config|
   if $image_version != "current"
       config.vm.box_version = $image_version
   end
+  #TODO - parallels image, do we need a special box?
   config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/%s/coreos_production_vagrant.json" % [$update_channel, $image_version]
+
+  config.vm.provider :parallels do |p|
+    #TODO - Do we need to tell vagrant we do not have guest additions or the likes?
+  end
 
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
     config.vm.provider vmware do |v, override|
@@ -83,6 +88,10 @@ Vagrant.configure("2") do |config|
         serialFile = File.join(logdir, "%s-serial.txt" % vm_name)
         FileUtils.touch(serialFile)
 
+        config.vm.provider :parallels do |p, override|
+          #TODO - add paralles serialfile parameters
+        end
+
         ["vmware_fusion", "vmware_workstation"].each do |vmware|
           config.vm.provider vmware do |v, override|
             v.vmx["serial0.present"] = "TRUE"
@@ -96,6 +105,7 @@ Vagrant.configure("2") do |config|
           vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
           vb.customize ["modifyvm", :id, "--uartmode1", serialFile]
         end
+
       end
 
       if $expose_docker_tcp
@@ -104,6 +114,10 @@ Vagrant.configure("2") do |config|
 
       $forwarded_ports.each do |guest, host|
         config.vm.network "forwarded_port", guest: guest, host: host, auto_correct: true
+      end
+
+      config.vm.provider :parallels do |vb|
+        #TODO - vm size parameters for parallels
       end
 
       ["vmware_fusion", "vmware_workstation"].each do |vmware|
