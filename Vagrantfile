@@ -14,7 +14,7 @@ $instance_name_prefix = "core"
 $update_channel = "alpha"
 $image_version = "current"
 $enable_serial_logging = false
-$share_home = false
+$share_home = true
 $vm_gui = false
 $vm_memory = 1024
 $vm_cpus = 1
@@ -52,11 +52,11 @@ Vagrant.configure("2") do |config|
   if $image_version != "current"
       config.vm.box_version = $image_version
   end
-  #TODO - parallels image, do we need a special box?
   config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/%s/coreos_production_vagrant.json" % [$update_channel, $image_version]
 
-  config.vm.provider :parallels do |p|
-    #TODO - Do we need to tell vagrant we do not have guest additions or the likes?
+  config.vm.provider :parallels do |v, override|
+    override.vm.box = "AntonioMeireles/coreos-%s" % $update_channel
+    override.vm.box_url = "https://vagrantcloud.com/AntonioMeireles/coreos-%s" % $update_channel
   end
 
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
@@ -88,8 +88,8 @@ Vagrant.configure("2") do |config|
         serialFile = File.join(logdir, "%s-serial.txt" % vm_name)
         FileUtils.touch(serialFile)
 
-        config.vm.provider :parallels do |p, override|
-          #TODO - add paralles serialfile parameters
+        config.vm.provider :parallels do |prl|
+          prl.customize ["set", :id, "--device-add", "serial", "--output", serialFile]
         end
 
         ["vmware_fusion", "vmware_workstation"].each do |vmware|
@@ -105,7 +105,6 @@ Vagrant.configure("2") do |config|
           vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
           vb.customize ["modifyvm", :id, "--uartmode1", serialFile]
         end
-
       end
 
       if $expose_docker_tcp
@@ -116,8 +115,10 @@ Vagrant.configure("2") do |config|
         config.vm.network "forwarded_port", guest: guest, host: host, auto_correct: true
       end
 
-      config.vm.provider :parallels do |vb|
-        #TODO - vm size parameters for parallels
+      config.vm.provider :parallels do |prl|
+        prl.customize ["set", :id, "--startup-view", vm_gui ? "window" : "headless"]
+        prl.memory = vm_memory
+        prl.cpus = vm_cpus
       end
 
       ["vmware_fusion", "vmware_workstation"].each do |vmware|
